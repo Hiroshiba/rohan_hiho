@@ -77,18 +77,18 @@ def decide(jul_phones: list[str], ojt_labels: list[FullContextLabel], verbose=Fa
             elif (p1 == "i" and p2 == "I") or (p1 == "u" and p2 == "U"):
                 labels += [l2]
 
-            elif (pp1 == ("o", "u") and pp2 == ("o", "o")) or (
-                pp1 == ("e", "i") and pp2 == ("e", "e")
+            elif (pp1 == ["o", "u"] and pp2 == ["o", "o"]) or (
+                pp1 == ["e", "i"] and pp2 == ["e", "e"]
             ):
                 labels += [l2]
 
-            elif np1 == ("j", "i") and np2 == ("d", "i"):
+            elif np1 == ["j", "i"] and np2 == ["d", "i"]:
                 labels += [l2]
 
-            elif np1 == ("j", "u") and np2 == ("d", "u"):
+            elif np1 == ["j", "u"] and np2 == ["d", "u"]:
                 labels += [l2]
 
-            elif np1 == ("ch", "i") and np2 == ("t", "i"):
+            elif np1 == ["ch", "i"] and np2 == ["t", "i"]:
                 labels += [l2]
 
             else:
