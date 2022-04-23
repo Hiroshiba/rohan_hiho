@@ -84,12 +84,43 @@ def decide(jul_phones: list[str], ojt_labels: list[FullContextLabel], verbose=Fa
 
             elif np1 == ["j", "i"] and np2 == ["d", "i"]:
                 labels += [l2]
-
             elif np1 == ["j", "u"] and np2 == ["d", "u"]:
                 labels += [l2]
-
             elif np1 == ["ch", "i"] and np2 == ["t", "i"]:
                 labels += [l2]
+
+            elif (
+                (np1 == ["v", "a"] and np2 == ["b", "a"])
+                or (np1 == ["v", "i"] and np2 == ["b", "i"])
+                or (np1 == ["v", "u"] and np2 == ["b", "u"])
+                or (np1 == ["v", "e"] and np2 == ["b", "e"])
+                or (np1 == ["v", "o"] and np2 == ["b", "o"])
+            ):
+                # なぜかvがbになる
+                l2.contexts["p3"] = "v"
+                labels += [l2]
+
+            elif (
+                (p1 == "kw" and np2 == ["k", "u"])
+                or (p1 == "kw" and np2 == ["k", "u"])
+                or (p1 == "kw" and np2 == ["k", "u"])
+                or (p1 == "kw" and np2 == ["k", "u"])
+                or (p1 == "kw" and np2 == ["k", "u"])
+            ):
+                l2.contexts["p3"] = "kw"
+                labels += [l2]
+                inc2 = 2
+
+            elif (
+                (p1 == "gw" and np2 == ["g", "u"])
+                or (p1 == "gw" and np2 == ["g", "u"])
+                or (p1 == "gw" and np2 == ["g", "u"])
+                or (p1 == "gw" and np2 == ["g", "u"])
+                or (p1 == "gw" and np2 == ["g", "u"])
+            ):
+                l2.contexts["p3"] = "gw"
+                labels += [l2]
+                inc2 = 2
 
             else:
                 labels += list(jul_phones[i1:e1])
@@ -204,11 +235,12 @@ def main():
     texts: list[str] = list(map(get_text, rohan_string.splitlines()))
     yomis: list[str] = list(map(get_yomi, rohan_string.splitlines()))
 
-    # texts = texts[:20]
-    # yomis = yomis[:20]
+    # texts = texts[1825:1826]
+    # yomis = yomis[1825:1826]
     # labels_list = [
     #     alignment((text, yomi), verbose=True) for text, yomi in zip(texts, yomis)
     # ]
+    # breakpoint()
 
     with multiprocessing.Pool(processes=16) as pool:
         it = pool.imap(alignment, zip(texts, yomis), chunksize=32)
