@@ -82,7 +82,7 @@ def decide(jul_phones: list[str], ojt_labels: list[FullContextLabel], verbose=Fa
             ):
                 labels += [l2]
 
-            elif np1 == ["j", "i"] and np2 == ["d", "i"]:
+            elif np1 == ["j", "i"] and np2 == ["d", "i"]:  # これら要らないのでは･･･？
                 labels += [l2]
             elif np1 == ["j", "u"] and np2 == ["d", "u"]:
                 labels += [l2]
