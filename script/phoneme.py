@@ -229,8 +229,8 @@ def main():
     with urllib.request.urlopen(rohan_url) as response:
         rohan_string: str = response.read().decode()
 
-    output_phoneme_path = Path("rohan4600_phoneme_openjtalk.txt")
-    output_memo_path = Path("rohan4600_memo_openjtalk.txt")
+    output_phoneme_path = Path("rohan4600_phoneme.txt")
+    output_memo_path = Path("rohan4600_memo.txt")
 
     texts: list[str] = list(map(get_text, rohan_string.splitlines()))
     yomis: list[str] = list(map(get_yomi, rohan_string.splitlines()))

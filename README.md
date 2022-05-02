@@ -2,14 +2,14 @@
 
 ## 内容物
 
-* rohan4600_phoneme_openjtalk.txt
+* rohan4600_phoneme.txt
     * OpenJTalk用音素列
     * phoneme.pyを実行して取得
-* rohan4600_memo_openjtalk.txt
+* rohan4600_memo.txt
     * アクセント情報を手修正するためのテキストファイル
     * script/phoneme.pyを実行して取得したものを手修正
-* rohan4600_accent_*_openjtalk.txt
-    * [./rohan4600_memo_openjtalk.txt]のアクセント情報をonehotベクトルで使いやすいように加工したテキストファイル
+* rohan4600_accent_*.txt
+    * [./rohan4600_memo.txt]のアクセント情報をonehotベクトルで使いやすいように加工したテキストファイル
     * script/accent_post.pyを実行して取得
 
 ## 謝辞

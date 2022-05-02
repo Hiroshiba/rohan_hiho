@@ -196,13 +196,13 @@ def accent_check(
 
 
 def main():
-    phoneme_path = Path("rohan4600_phoneme_openjtalk.txt")
-    modified_path = Path("rohan4600_memo_openjtalk.txt")
+    phoneme_path = Path("rohan4600_phoneme.txt")
+    modified_path = Path("rohan4600_memo.txt")
 
-    accent_starts_path = Path("rohan4600_accent_starts_openjtalk.txt")
-    accent_ends_path = Path("rohan4600_accent_ends_openjtalk.txt")
-    accent_phrase_starts_path = Path("rohan4600_accent_phrase_starts_openjtalk.txt")
-    accent_phrase_ends_path = Path("rohan4600_accent_phrase_ends_openjtalk.txt")
+    accent_starts_path = Path("rohan4600_accent_starts.txt")
+    accent_ends_path = Path("rohan4600_accent_ends.txt")
+    accent_phrase_starts_path = Path("rohan4600_accent_phrase_starts.txt")
+    accent_phrase_ends_path = Path("rohan4600_accent_phrase_ends.txt")
 
     phone_text_list = phoneme_path.read_text().splitlines()
     yomis = modified_path.read_text().splitlines()[1::3]
