@@ -1,0 +1,4 @@
+requests
+git+https://github.com/Hiroshiba/acoustic_feature_extractor
+git+https://github.com/Hiroshiba/openjtalk-label-getter
+git+https://github.com/Hiroshiba/julius4seg
