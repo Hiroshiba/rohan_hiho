@@ -4,6 +4,7 @@ FIXME: つもりだったけど、ラベルファイル側の誤りが多いた�
 """
 
 import argparse
+from copy import deepcopy
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -67,7 +68,7 @@ def _create_phoneme_infos(name: str):
     ]
 
 
-def process(labs_path: Path, base_phoneme_info_list: List[PhonemeInfo]):
+def process(labs_path: Path, base_phoneme_info_list: List[PhonemeInfo], force: bool):
     labs = OjtPhoneme.load_julius_list(labs_path)
     labs[0].phoneme = labs[-1].phoneme = "sil"
 
@@ -122,7 +123,7 @@ def process(labs_path: Path, base_phoneme_info_list: List[PhonemeInfo]):
         elif tag == "insert" and j2 - j1 == 1 and ep == ["pau"]:
             each_phoneme_info_list += [PhonemeInfo("pau", "0", "0", "0", "0")]
 
-        # 無視：一文字だけ違う
+        # 一文字だけ違う
         elif tag == "replace" and i2 - i1 == 1 and j2 - j1 == 1:
             each_phoneme_info_list += [
                 copy_phoneme_info(base_phoneme_info_list[i1], ep[0])
@@ -130,30 +131,39 @@ def process(labs_path: Path, base_phoneme_info_list: List[PhonemeInfo]):
 
             unexpcted = True
 
-        # 無視：予期せず消された
+        # 予期せず消された
         elif tag == "delete":
-            # phoneme_info_lists = deepcopy(base_phoneme_info_list[i1:i2])
-            # for phoneme_info_list in phoneme_info_lists:
-            #     phoneme_info_list.phoneme = "?"
-            # each_phoneme_info_list += phoneme_info_lists
+            if not force:
+                phoneme_info_lists = deepcopy(base_phoneme_info_list[i1:i2])
+                for phoneme_info_list in phoneme_info_lists:
+                    phoneme_info_list.phoneme = "?"
+                each_phoneme_info_list += phoneme_info_lists
 
             unexpcted = True
 
-        # 無視：予期せず足された
+        # 予期せず足された
         elif tag == "insert":
-            # each_phoneme_info_list += [PhonemeInfo(p, "?", "?", "?", "?") for p in ep]
-            each_phoneme_info_list += [
-                copy_phoneme_info(base_phoneme_info_list[i1], p) for p in ep
-            ]
+            if not force:
+                each_phoneme_info_list += [
+                    PhonemeInfo(p, "?", "?", "?", "?") for p in ep
+                ]
+            else:
+                each_phoneme_info_list += [
+                    copy_phoneme_info(base_phoneme_info_list[i1], p) for p in ep
+                ]
 
             unexpcted = True
 
-        # 無視：予期せず違った
+        # 予期せず違った
         elif tag == "replace":
-            # each_phoneme_info_list += [PhonemeInfo(p, "?", "?", "?", "?") for p in ep]
-            each_phoneme_info_list += [
-                copy_phoneme_info(base_phoneme_info_list[i1], p) for p in ep
-            ]
+            if not force:
+                each_phoneme_info_list += [
+                    PhonemeInfo(p, "?", "?", "?", "?") for p in ep
+                ]
+            else:
+                each_phoneme_info_list += [
+                    copy_phoneme_info(base_phoneme_info_list[i1], p) for p in ep
+                ]
 
             unexpcted = True
 
@@ -174,7 +184,7 @@ def phoneme_info_list_memo(name: str, stem: str, phoneme_info_list: List[Phoneme
     return memo_text
 
 
-def each(root_dir: Path, memo_path: Path):
+def each(root_dir: Path, memo_path: Path, force: bool):
     rohan4600_phoneme_info_lists = _create_phoneme_infos("rohan4600")
 
     memo_dict = {}
@@ -196,18 +206,18 @@ def each(root_dir: Path, memo_path: Path):
         }
 
     memo_text = ""
-    for speaker in ["zundamon"]:
-        name = f"{speaker}"
-        print(name)
+    for speaker, style in [["zundamon", "normal"]]:
+        target = f"{speaker}-{style}"
+        print(target)
 
-        (Path(name) / "phoneme").mkdir(exist_ok=True, parents=True)
-        (Path(name) / "accent_start").mkdir(exist_ok=True, parents=True)
-        (Path(name) / "accent_end").mkdir(exist_ok=True, parents=True)
-        (Path(name) / "accent_phrase_start").mkdir(exist_ok=True, parents=True)
-        (Path(name) / "accent_phrase_end").mkdir(exist_ok=True, parents=True)
+        (Path(target) / "phoneme").mkdir(exist_ok=True, parents=True)
+        (Path(target) / "accent_start").mkdir(exist_ok=True, parents=True)
+        (Path(target) / "accent_end").mkdir(exist_ok=True, parents=True)
+        (Path(target) / "accent_phrase_start").mkdir(exist_ok=True, parents=True)
+        (Path(target) / "accent_phrase_end").mkdir(exist_ok=True, parents=True)
 
         phoneme_info_lists = rohan4600_phoneme_info_lists
-        labs_paths = sorted((root_dir / speaker / "label").glob("*.lab"))
+        labs_paths = sorted((root_dir / speaker / target / "label").glob("*.lab"))
 
         assert len(phoneme_info_lists) == len(labs_paths)
 
@@ -215,43 +225,59 @@ def each(root_dir: Path, memo_path: Path):
             stem = labs_path.stem
 
             # メモに存在
-            if (name, stem) in memo_dict:
-                each_phoneme_info_list = memo_dict[(name, stem)]
+            if (target, stem) in memo_dict:
+                each_phoneme_info_list = memo_dict[(target, stem)]
                 unexpcted = False
+
+                each_phoneme_info_list_before, _ = process(
+                    labs_path=labs_path,
+                    base_phoneme_info_list=phoneme_info_list,
+                    force=True,
+                )
+
+                assert [pi.phoneme for pi in each_phoneme_info_list] == [
+                    pi.phoneme for pi in each_phoneme_info_list_before
+                ], (
+                    stem,
+                    [pi.phoneme for pi in each_phoneme_info_list],
+                    [pi.phoneme for pi in each_phoneme_info_list_before],
+                )
 
             # メモにないとき
             else:
                 each_phoneme_info_list, unexpcted = process(
-                    labs_path=labs_path, base_phoneme_info_list=phoneme_info_list
+                    labs_path=labs_path,
+                    base_phoneme_info_list=phoneme_info_list,
+                    force=force,
                 )
 
             # メモに追加
             if unexpcted:
                 memo_text += phoneme_info_list_memo(
-                    name=name, stem=stem, phoneme_info_list=each_phoneme_info_list
+                    name=target, stem=stem, phoneme_info_list=each_phoneme_info_list
                 )
 
             # 書き出し
             else:
-                path = Path(name) / "phoneme" / f"{stem}.txt"
+                path = Path(target) / "phoneme" / f"{stem}.txt"
                 path.write_text(" ".join([pi.phoneme for pi in each_phoneme_info_list]))
 
-                path = Path(name) / "accent_start" / f"{stem}.txt"
+                path = Path(target) / "accent_start" / f"{stem}.txt"
                 path.write_text(
                     " ".join([pi.accent_start for pi in each_phoneme_info_list])
                 )
 
-                path = Path(name) / "accent_end" / f"{stem}.txt"
+                path = Path(target) / "accent_end" / f"{stem}.txt"
                 path.write_text(
                     " ".join([pi.accent_end for pi in each_phoneme_info_list])
                 )
 
-                path = Path(name) / "accent_phrase_start" / f"{stem}.txt"
+                path = Path(target) / "accent_phrase_start" / f"{stem}.txt"
                 path.write_text(
                     " ".join([pi.accent_phrase_start for pi in each_phoneme_info_list])
                 )
 
-                path = Path(name) / "accent_phrase_end" / f"{stem}.txt"
+                path = Path(target) / "accent_phrase_end" / f"{stem}.txt"
                 path.write_text(
                     " ".join([pi.accent_phrase_end for pi in each_phoneme_info_list])
                 )
@@ -264,5 +290,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--root_dir", type=Path)
     parser.add_argument("--memo_path", type=Path, default=Path("each_memo.txt"))
+    parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     each(**vars(args))

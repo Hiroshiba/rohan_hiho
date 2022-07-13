@@ -4,6 +4,8 @@ FIXME: つもりだったけど、ラベルファイル側の誤りが多いた�
 """
 from pathlib import Path
 
+from tqdm import tqdm
+
 vowel_list = ("a", "i", "u", "e", "o", "A", "I", "U", "E", "O")
 pause_list = ("pau", "sil")
 conso_list = (
@@ -40,17 +42,17 @@ conso_list = (
 other_list = ("cl", "N")
 
 
-def each_check(name: str):
-    print("check", name)
+def each_check(target: str):
+    print("check", target)
 
-    phoneme_list_paths = sorted((Path(name) / "phoneme").glob("*.txt"))
-    accent_start_list_paths = sorted((Path(name) / "accent_start").glob("*.txt"))
-    accent_end_list_paths = sorted((Path(name) / "accent_end").glob("*.txt"))
+    phoneme_list_paths = sorted((Path(target) / "phoneme").glob("*.txt"))
+    accent_start_list_paths = sorted((Path(target) / "accent_start").glob("*.txt"))
+    accent_end_list_paths = sorted((Path(target) / "accent_end").glob("*.txt"))
     accent_phrase_start_list_paths = sorted(
-        (Path(name) / "accent_phrase_start").glob("*.txt")
+        (Path(target) / "accent_phrase_start").glob("*.txt")
     )
     accent_phrase_end_list_paths = sorted(
-        (Path(name) / "accent_phrase_end").glob("*.txt")
+        (Path(target) / "accent_phrase_end").glob("*.txt")
     )
 
     assert len(phoneme_list_paths) > 0
@@ -58,11 +60,6 @@ def each_check(name: str):
     assert len(accent_end_list_paths) == len(phoneme_list_paths)
     assert len(accent_phrase_start_list_paths) == len(phoneme_list_paths)
     assert len(accent_phrase_end_list_paths) == len(phoneme_list_paths)
-
-    memo_path = Path("each_memo.txt")
-    memo_stems = [
-        line.split()[1] for line in memo_path.read_text().strip().splitlines()[0::6]
-    ]
 
     log_path = Path("/tmp/log.txt").open("w")
 
@@ -72,17 +69,15 @@ def each_check(name: str):
         accent_end_list_path,
         accent_phrase_start_list_path,
         accent_phrase_end_list_path,
-    ) in zip(
-        phoneme_list_paths,
-        accent_start_list_paths,
-        accent_end_list_paths,
-        accent_phrase_start_list_paths,
-        accent_phrase_end_list_paths,
+    ) in tqdm(
+        zip(
+            phoneme_list_paths,
+            accent_start_list_paths,
+            accent_end_list_paths,
+            accent_phrase_start_list_paths,
+            accent_phrase_end_list_paths,
+        )
     ):
-        if phoneme_list_path.stem in memo_stems:
-            print(phoneme_list_path.stem, "skipped!")
-            continue
-
         phoneme = phoneme_list_path.read_text().split()
         accent_start = [
             bool(int(a)) for a in accent_start_list_path.read_text().split()
@@ -179,6 +174,6 @@ def each_check(name: str):
         assert a == b
 
 
-for speaker in ["zundamon"]:
-    name = f"{speaker}"
-    each_check(name)
+for speaker, style in [["zundamon", "normal"]]:
+    target = f"{speaker}-{style}"
+    each_check(target)
