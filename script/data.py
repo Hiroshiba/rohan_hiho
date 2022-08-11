@@ -203,3 +203,4 @@ conso_list = (
     "y",
     "z",
 )
+all_list = conso_list + moraend_list

@@ -1,6 +1,5 @@
 """
 台本とラベルファイルで音素が違うものを検出して人力で修正する。
-FIXME: つもりだったけど、ラベルファイル側の誤りが多いため、ほとんどのものを無視する。
 """
 
 import argparse
@@ -8,10 +7,12 @@ from copy import deepcopy
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from acoustic_feature_extractor.data.phoneme import OjtPhoneme
 from tqdm import tqdm
+
+from script.data import conso_list, vowel_list
 
 
 @dataclass
@@ -68,7 +69,9 @@ def _create_phoneme_infos(name: str):
     ]
 
 
-def process(labs_path: Path, base_phoneme_info_list: List[PhonemeInfo], force: bool):
+def process(
+    labs_path: Path, base_phoneme_info_list: List[PhonemeInfo], auto: bool, force: bool
+):
     labs = OjtPhoneme.load_julius_list(labs_path)
     labs[0].phoneme = labs[-1].phoneme = "sil"
 
@@ -88,6 +91,8 @@ def process(labs_path: Path, base_phoneme_info_list: List[PhonemeInfo], force: b
     ]
 
     each_phoneme_info_list: List[PhonemeInfo] = []
+
+    force_table: Dict[int, PhonemeInfo] = {}  # force用の置き換えテーブル
 
     unexpcted = False
 
@@ -115,6 +120,21 @@ def process(labs_path: Path, base_phoneme_info_list: List[PhonemeInfo], force: b
                 copy_phoneme_info(base_phoneme_info_list[i1], ep[1]),
             ]
 
+        # g u → gw, k u → kw
+        # TODO: これだと子音と母音がずれる
+        elif (
+            tag == "replace"
+            and i2 - i1 == 2
+            and j2 - j1 == 1
+            and (
+                (bp == ["g", "u"] and ep == ["gw"])
+                or (bp == ["k", "u"] and ep == ["kw"])
+            )
+        ):
+            each_phoneme_info_list += [
+                copy_phoneme_info(base_phoneme_info_list[i1], ep[0]),
+            ]
+
         # 無音が消された
         elif tag == "delete" and i2 - i1 == 1 and bp == ["pau"]:
             pass
@@ -133,7 +153,7 @@ def process(labs_path: Path, base_phoneme_info_list: List[PhonemeInfo], force: b
 
         # 予期せず消された
         elif tag == "delete":
-            if not force:
+            if not auto and not force:
                 phoneme_info_lists = deepcopy(base_phoneme_info_list[i1:i2])
                 for phoneme_info_list in phoneme_info_lists:
                     phoneme_info_list.phoneme = "?"
@@ -143,32 +163,78 @@ def process(labs_path: Path, base_phoneme_info_list: List[PhonemeInfo], force: b
 
         # 予期せず足された
         elif tag == "insert":
-            if not force:
-                each_phoneme_info_list += [
-                    PhonemeInfo(p, "?", "?", "?", "?") for p in ep
-                ]
-            else:
-                each_phoneme_info_list += [
-                    copy_phoneme_info(base_phoneme_info_list[i1], p) for p in ep
-                ]
+            each_phoneme_info_list += [PhonemeInfo(p, "?", "?", "?", "?") for p in ep]
+
+            if force:
+                for i, p in enumerate(ep):
+                    force_table[j1 + i] = copy_phoneme_info(
+                        base_phoneme_info_list[i1], p
+                    )
 
             unexpcted = True
 
         # 予期せず違った
         elif tag == "replace":
-            if not force:
+            if not auto and not force:
                 each_phoneme_info_list += [
                     PhonemeInfo(p, "?", "?", "?", "?") for p in ep
                 ]
             else:
-                each_phoneme_info_list += [
-                    copy_phoneme_info(base_phoneme_info_list[i1], p) for p in ep
-                ]
+                if i2 - i1 == j2 - j1:
+                    each_phoneme_info_list += [
+                        copy_phoneme_info(base_phoneme_info_list[i1 + i], p)
+                        for i, p in enumerate(ep)
+                    ]
+                else:
+                    each_phoneme_info_list += [
+                        PhonemeInfo(p, "?", "?", "?", "?") for p in ep
+                    ]
+
+                    if force:
+                        for i, p in enumerate(ep):
+                            force_table[j1 + i] = copy_phoneme_info(
+                                base_phoneme_info_list[i1], p
+                            )
 
             unexpcted = True
 
         else:
             raise ValueError(f"{tag}, {bp}, {ep}")
+
+    # 自動修正
+    if unexpcted and (auto or force):
+        for i, phoneme_info in enumerate(each_phoneme_info_list):
+            if phoneme_info.accent_start != "?":
+                continue
+
+            p = phoneme_info.phoneme
+
+            if p == "pau":
+                each_phoneme_info_list[i] = PhonemeInfo(p, "0", "0", "0", "0")
+
+            # 母音の場合は子音をコピー
+            elif p in vowel_list:
+                if (each_phoneme_info_list[i - 1].accent_start != "?") and (
+                    each_phoneme_info_list[i - 1].phoneme in conso_list
+                ):
+                    each_phoneme_info_list[i] = copy_phoneme_info(
+                        each_phoneme_info_list[i - 1], p
+                    )
+
+            # 子音の場合は母音をコピー
+            elif p in conso_list:
+                if (each_phoneme_info_list[i + 1].accent_start != "?") and (
+                    each_phoneme_info_list[i + 1].phoneme in vowel_list
+                ):
+                    each_phoneme_info_list[i] = copy_phoneme_info(
+                        each_phoneme_info_list[i + 1], p
+                    )
+
+    # 強制置換
+    if force:
+        for i, phoneme_info in enumerate(each_phoneme_info_list):
+            if phoneme_info.accent_start == "?":
+                each_phoneme_info_list[i] = force_table[i]
 
     return each_phoneme_info_list, unexpcted
 
@@ -184,7 +250,7 @@ def phoneme_info_list_memo(name: str, stem: str, phoneme_info_list: List[Phoneme
     return memo_text
 
 
-def each(root_dir: Path, memo_path: Path, force: bool):
+def each(root_dir: Path, memo_path: Path, auto: bool, force: bool):
     rohan4600_phoneme_info_lists = _create_phoneme_infos("rohan4600")
 
     memo_dict = {}
@@ -217,7 +283,7 @@ def each(root_dir: Path, memo_path: Path, force: bool):
         (Path(target) / "accent_phrase_end").mkdir(exist_ok=True, parents=True)
 
         phoneme_info_lists = rohan4600_phoneme_info_lists
-        labs_paths = sorted((root_dir / speaker / target / "label").glob("*.lab"))
+        labs_paths = sorted((root_dir / speaker / target / "label").glob("*4600*.lab"))
 
         assert len(phoneme_info_lists) == len(labs_paths)
 
@@ -232,6 +298,7 @@ def each(root_dir: Path, memo_path: Path, force: bool):
                 each_phoneme_info_list_before, _ = process(
                     labs_path=labs_path,
                     base_phoneme_info_list=phoneme_info_list,
+                    auto=False,
                     force=True,
                 )
 
@@ -248,6 +315,7 @@ def each(root_dir: Path, memo_path: Path, force: bool):
                 each_phoneme_info_list, unexpcted = process(
                     labs_path=labs_path,
                     base_phoneme_info_list=phoneme_info_list,
+                    auto=auto,
                     force=force,
                 )
 
@@ -290,6 +358,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--root_dir", type=Path)
     parser.add_argument("--memo_path", type=Path, default=Path("each_memo.txt"))
+    parser.add_argument("--auto", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     each(**vars(args))

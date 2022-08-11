@@ -1,45 +1,11 @@
 """
 アクセントの規則がおかしいものを探す。
-FIXME: つもりだったけど、ラベルファイル側の誤りが多いため、memoにあるものは無視する。
 """
 from pathlib import Path
 
 from tqdm import tqdm
 
-vowel_list = ("a", "i", "u", "e", "o", "A", "I", "U", "E", "O")
-pause_list = ("pau", "sil")
-conso_list = (
-    "b",
-    "by",
-    "ch",
-    "d",
-    "dy",
-    "f",
-    "g",
-    "gy",
-    "h",
-    "hy",
-    "j",
-    "k",
-    "ky",
-    "m",
-    "my",
-    "n",
-    "ny",
-    "p",
-    "py",
-    "r",
-    "ry",
-    "s",
-    "sh",
-    "t",
-    "ts",
-    "v",
-    "w",
-    "y",
-    "z",
-)
-other_list = ("cl", "N")
+from script.data import all_list, conso_list, other_list, pause_list, vowel_list
 
 
 def each_check(target: str):
@@ -108,6 +74,9 @@ def each_check(target: str):
         expected_is_start = True
 
         for i in range(len(phoneme)):
+            # 既知の音素
+            assert phoneme[i] in all_list
+
             # 無音にアクセント句区切りは来ない
             if phoneme[i] in pause_list:
                 assert not accent_phrase_start[i]

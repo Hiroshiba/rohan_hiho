@@ -2,15 +2,12 @@
 
 ## 内容物
 
-* rohan4600_phoneme.txt
+* rohan4600_phoneme.txt rohan4600_accent_*.txt
     * OpenJTalk用音素列
-    * phoneme.pyを実行して取得
+    * [Zundamon_ROHAN_label](https://github.com/RRR-troisR/Zundamon_ROHAN_label)から取得
 * rohan4600_memo.txt
     * アクセント情報を手修正するためのテキストファイル
     * script/phoneme.pyを実行して取得したものを手修正
-* rohan4600_accent_*.txt
-    * [./rohan4600_memo.txt]のアクセント情報をonehotベクトルで使いやすいように加工したテキストファイル
-    * script/accent_post.pyを実行して取得
 
 ## 謝辞
 
